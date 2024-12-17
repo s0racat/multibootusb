@@ -39,6 +39,7 @@ showUsage() {
 		  -i,  --interactive            Launch gdisk to create a hybrid MBR
 		  -h,  --help                   Display this message
 		  -s,  --subdirectory <NAME>    Specify a data subdirectory (default: "boot")
+		  -u,  --update                 Only update bootloader and configuration files
 
 	EOF
 }
@@ -79,8 +80,8 @@ esac
 
 # Check for root
 if [ "$(id -u)" -ne 0 ]; then
-	printf 'This script must be run as root. Using sudo...\n' "$scriptname" >&2
-	exec sudo -k -- /bin/sh "$0" "$@" || cleanUp 2
+	echo "This script needs to run with root privileges."
+	exit 1
 fi
 
 # Get original user
@@ -135,13 +136,13 @@ if [ ! "$usb_dev" ]; then
 fi
 
 # Check for GRUB installation binary
-if [ -n "${GRUB_EFI:-}" ]; then
+if [ -n "${GRUB_EFI}" ]; then
 	grubefi="$GRUB_EFI"
 else
 	grubefi=$(command -v grub-install || command -v grub2-install) || cleanUp 3
 fi
 
-if [ -n "${GRUB_PC:-}" ]; then
+if [ -n "${GRUB_PC}" ]; then
 	grubpc="$GRUB_PC"
 else
 	grubpc=$(command -v grub-install || command -v grub2-install) || cleanUp 3
@@ -294,10 +295,10 @@ $grubpc --force --target=i386-pc \
 mkdir -p "${data_mnt}/${data_subdir}/isos" || cleanUp 10
 
 # Copy files
-cp -R ./mbusb.* "${data_mnt}/${data_subdir}"/grub*/ ||
+(cd "$(dirname "$(realpath "$0")")" && cp -R ./mbusb.* "${data_mnt}/${data_subdir}"/grub*/) ||
 	cleanUp 10
 # Copy example configuration for GRUB
-cp ./grub.cfg.example "${data_mnt}/${data_subdir}"/grub*/ ||
+(cd "$(dirname "$(realpath "$0")")" && cp ./grub.cfg.example "${data_mnt}/${data_subdir}"/grub*/) ||
 	cleanUp 10
 
 # Rename example configuration
