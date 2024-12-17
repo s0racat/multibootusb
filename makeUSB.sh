@@ -32,7 +32,7 @@ showUsage() {
 		Usage: $scriptname [options] device [fs-type] [data-size]
 
 		 device                         Device to modify (e.g. /dev/sdb)
-		 fs-type                        Filesystem type for the data partition [ext3|ext4|vfat|ntfs]
+		 fs-type                        Filesystem type for the data partition [ext3|ext4|vfat|exfat|ntfs]
 		 data-size                      Data partition size (e.g. 5G)
 		  -b,  --hybrid                 Create a hybrid MBR
 		  -e,  --efi                    Enable EFI compatibility
@@ -201,7 +201,7 @@ if [ "$update_only" -eq 0 ]; then
 		type_code="8300"
 		part_name="Linux filesystem"
 		;;
-	msdos | fat | vfat | ntfs)
+	msdos | fat | vfat | ntfs | exfat)
 		type_code="0700"
 		part_name="Microsoft basic data"
 		;;
