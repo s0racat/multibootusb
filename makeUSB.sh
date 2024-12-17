@@ -141,7 +141,7 @@ else
 	grubefi=$(command -v grub-install || command -v grub2-install) || cleanUp 3
 fi
 
-if [ -n ${GRUB_PC:-} ]; then
+if [ -n "${GRUB_PC:-}" ]; then
 	grubpc="$GRUB_PC"
 else
 	grubpc=$(command -v grub-install || command -v grub2-install) || cleanUp 3
