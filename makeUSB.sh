@@ -23,6 +23,7 @@ data_mnt=""
 data_subdir="boot"
 repo_dir=""
 tmp_dir="${TMPDIR-/tmp}"
+update_only=0
 
 # Show usage
 showUsage() {
@@ -101,6 +102,9 @@ while [ "$#" -gt 0 ]; do
 	-s | --subdirectory)
 		shift && data_subdir="$1"
 		;;
+	-u | --update-only)
+		update_only=1
+		;;
 	/dev/*)
 		if [ -b "$1" ]; then
 			usb_dev="$1"
@@ -146,111 +150,113 @@ fi
 # Unmount device
 unmountUSB "$usb_dev"
 
-# Confirm the device
-printf 'Are you sure you want to use %s? [y/N] ' "$usb_dev"
-read -r answer1
-case "$answer1" in
-[yY][eE][sS] | [yY])
-	printf 'THIS WILL DELETE ALL DATA ON THE DEVICE. Are you sure? [y/N] '
-	read -r answer2
-	case $answer2 in
+if [ "$update_only" -eq 0 ]; then
+	# Confirm the device
+	printf 'Are you sure you want to use %s? [y/N] ' "$usb_dev"
+	read -r answer1
+	case "$answer1" in
 	[yY][eE][sS] | [yY])
-		true
+		printf 'THIS WILL DELETE ALL DATA ON THE DEVICE. Are you sure? [y/N] '
+		read -r answer2
+		case $answer2 in
+		[yY][eE][sS] | [yY])
+			true
+			;;
+		*)
+			cleanUp 3
+			;;
+		esac
 		;;
 	*)
 		cleanUp 3
 		;;
 	esac
-	;;
-*)
-	cleanUp 3
-	;;
-esac
 
-# Print all steps
-set -o verbose
+	# Print all steps
+	set -o verbose
 
-# Remove partitions
-sgdisk --zap-all "$usb_dev"
+	# Remove partitions
+	sgdisk --zap-all "$usb_dev"
 
-# Create GUID Partition Table
-sgdisk --mbrtogpt "$usb_dev" || cleanUp 10
+	# Create GUID Partition Table
+	sgdisk --mbrtogpt "$usb_dev" || cleanUp 10
 
-# Create BIOS boot partition (1M)
-sgdisk --new 1::+1M --typecode 1:ef02 \
-	--change-name 1:"BIOS boot partition" "$usb_dev" || cleanUp 10
+	# Create BIOS boot partition (1M)
+	sgdisk --new 1::+1M --typecode 1:ef02 \
+		--change-name 1:"BIOS boot partition" "$usb_dev" || cleanUp 10
 
-# Create EFI System partition (50M)
-[ "$eficonfig" -eq 1 ] &&
-	{ sgdisk --new 2::+50M --typecode 2:ef00 \
-		--change-name 2:"EFI System" "$usb_dev" || cleanUp 10; }
+	# Create EFI System partition (50M)
+	[ "$eficonfig" -eq 1 ] &&
+		{ sgdisk --new 2::+50M --typecode 2:ef00 \
+			--change-name 2:"EFI System" "$usb_dev" || cleanUp 10; }
 
-# Set data partition size
-[ -z "$data_size" ] ||
-	data_size="+$data_size"
+	# Set data partition size
+	[ -z "$data_size" ] ||
+		data_size="+$data_size"
 
-# Set data partition information
-case "$data_fmt" in
-ext2 | ext3 | ext4)
-	type_code="8300"
-	part_name="Linux filesystem"
-	;;
-msdos | fat | vfat | ntfs)
-	type_code="0700"
-	part_name="Microsoft basic data"
-	;;
-*)
-	printf '%s: %s is an invalid filesystem type.\n' "$scriptname" "$data_fmt" >&2
-	showUsage
-	cleanUp 1
-	;;
-esac
+	# Set data partition information
+	case "$data_fmt" in
+	ext2 | ext3 | ext4)
+		type_code="8300"
+		part_name="Linux filesystem"
+		;;
+	msdos | fat | vfat | ntfs)
+		type_code="0700"
+		part_name="Microsoft basic data"
+		;;
+	*)
+		printf '%s: %s is an invalid filesystem type.\n' "$scriptname" "$data_fmt" >&2
+		showUsage
+		cleanUp 1
+		;;
+	esac
 
-# Create data partition
-sgdisk --new ${data_part}::"${data_size}": --typecode ${data_part}:"$type_code" \
-	--change-name ${data_part}:"$part_name" "$usb_dev" || cleanUp 10
+	# Create data partition
+	sgdisk --new ${data_part}::"${data_size}": --typecode ${data_part}:"$type_code" \
+		--change-name ${data_part}:"$part_name" "$usb_dev" || cleanUp 10
 
-# Unmount device
-unmountUSB "$usb_dev"
+	# Unmount device
+	unmountUSB "$usb_dev"
 
-# Interactive configuration?
-if [ "$interactive" -eq 1 ]; then
-	# Create hybrid MBR manually
-	# https://bit.ly/2z7HBrP
-	gdisk "$usb_dev"
-elif [ "$hybrid" -eq 1 ]; then
-	# Create hybrid MBR
-	if [ "$eficonfig" -eq 1 ]; then
-		sgdisk --hybrid 1:2:3 "$usb_dev" || cleanUp 10
-	else
-		sgdisk --hybrid 1:2 "$usb_dev" || cleanUp 10
+	# Interactive configuration?
+	if [ "$interactive" -eq 1 ]; then
+		# Create hybrid MBR manually
+		# https://bit.ly/2z7HBrP
+		gdisk "$usb_dev"
+	elif [ "$hybrid" -eq 1 ]; then
+		# Create hybrid MBR
+		if [ "$eficonfig" -eq 1 ]; then
+			sgdisk --hybrid 1:2:3 "$usb_dev" || cleanUp 10
+		else
+			sgdisk --hybrid 1:2 "$usb_dev" || cleanUp 10
+		fi
 	fi
-fi
 
-# Set bootable flag for data partion
-sgdisk --attributes ${data_part}:set:2 "$usb_dev" || cleanUp 10
+	# Set bootable flag for data partion
+	sgdisk --attributes ${data_part}:set:2 "$usb_dev" || cleanUp 10
 
-# Unmount device
-unmountUSB "$usb_dev"
+	# Unmount device
+	unmountUSB "$usb_dev"
 
-# Wipe BIOS boot partition
-wipefs -af "${usb_dev}1" || true
+	# Wipe BIOS boot partition
+	wipefs -af "${usb_dev}1" || true
 
-# Format EFI System partition
-if [ "$eficonfig" -eq 1 ]; then
-	wipefs -af "${usb_dev}2" || true
-	mkfs.vfat -v -F 32 "${usb_dev}2" || cleanUp 10
-fi
+	# Format EFI System partition
+	if [ "$eficonfig" -eq 1 ]; then
+		wipefs -af "${usb_dev}2" || true
+		mkfs.vfat -v -F 32 "${usb_dev}2" || cleanUp 10
+	fi
 
-# Wipe data partition
-wipefs -af "${usb_dev}${data_part}" || true
+	# Wipe data partition
+	wipefs -af "${usb_dev}${data_part}" || true
 
-# Format data partition
-if [ "$data_fmt" = "ntfs" ]; then
-	# Use mkntfs quick format
-	mkfs -t "$data_fmt" -f "${usb_dev}${data_part}" || cleanUp 10
-else
-	mkfs -t "$data_fmt" "${usb_dev}${data_part}" || cleanUp 10
+	# Format data partition
+	if [ "$data_fmt" = "ntfs" ]; then
+		# Use mkntfs quick format
+		mkfs -t "$data_fmt" -f "${usb_dev}${data_part}" || cleanUp 10
+	else
+		mkfs -t "$data_fmt" "${usb_dev}${data_part}" || cleanUp 10
+	fi
 fi
 
 # Unmount device
