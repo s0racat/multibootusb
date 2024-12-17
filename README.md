@@ -24,3 +24,11 @@ Visit the [project's website for more information][website].
 [grub]: https://www.gnu.org/software/grub/
 [isos]: https://mbusb.aguslr.com/isos.html
 [website]: https://mbusb.aguslr.com/
+
+## Dependencies
+
+- coreutils
+- gptfdisk
+- curl or wget
+- gnutar
+- grub2
