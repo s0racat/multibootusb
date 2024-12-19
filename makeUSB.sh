@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Description: Script to prepare multiboot USB drive
 
@@ -12,16 +12,13 @@ set -o errexit
 
 # Defaults
 scriptname=$(basename "$0")
-hybrid=0
-eficonfig=0
-interactive=0
+eficonfig=1
 data_part=2
 data_fmt="vfat"
 data_size=""
 efi_mnt=""
 data_mnt=""
 data_subdir="boot"
-repo_dir=""
 tmp_dir="${TMPDIR-/tmp}"
 update_only=0
 
@@ -34,12 +31,12 @@ showUsage() {
 		 device                         Device to modify (e.g. /dev/sdb)
 		 fs-type                        Filesystem type for the data partition [ext3|ext4|vfat|exfat|ntfs]
 		 data-size                      Data partition size (e.g. 5G)
-		  -b,  --hybrid                 Create a hybrid MBR
 		  -e,  --efi                    Enable EFI compatibility
-		  -i,  --interactive            Launch gdisk to create a hybrid MBR
 		  -h,  --help                   Display this message
 		  -s,  --subdirectory <NAME>    Specify a data subdirectory (default: "boot")
 		  -u,  --update                 Only update bootloader and configuration files
+
+		Example: makeUSB.sh -e /dev/sda vfat
 
 	EOF
 }
@@ -56,7 +53,6 @@ cleanUp() {
 	# Delete mountpoints
 	[ -d "$efi_mnt" ] && rmdir "$efi_mnt"
 	[ -d "$data_mnt" ] && rmdir "$data_mnt"
-	[ -d "$repo_dir" ] && rmdir "$repo_dir"
 	# Exit
 	exit "${1-0}"
 }
@@ -90,15 +86,9 @@ normal_user="${SUDO_USER-$(id -un)}"
 # Check arguments
 while [ "$#" -gt 0 ]; do
 	case "$1" in
-	-b | --hybrid)
-		hybrid=1
-		;;
 	-e | --efi)
 		eficonfig=1
-		data_part=3
-		;;
-	-i | --interactive)
-		interactive=1
+		data_part=2
 		;;
 	-s | --subdirectory)
 		shift && data_subdir="$1"
@@ -142,12 +132,6 @@ else
 	grubefi=$(command -v grub-install || command -v grub2-install) || cleanUp 3
 fi
 
-if [ -n "${GRUB_PC}" ]; then
-	grubpc="$GRUB_PC"
-else
-	grubpc=$(command -v grub-install || command -v grub2-install) || cleanUp 3
-fi
-
 # Unmount device
 unmountUSB "$usb_dev"
 
@@ -182,14 +166,10 @@ if [ "$update_only" -eq 0 ]; then
 	# Create GUID Partition Table
 	sgdisk --mbrtogpt "$usb_dev" || cleanUp 10
 
-	# Create BIOS boot partition (1M)
-	sgdisk --new 1::+1M --typecode 1:ef02 \
-		--change-name 1:"BIOS boot partition" "$usb_dev" || cleanUp 10
-
 	# Create EFI System partition (50M)
 	[ "$eficonfig" -eq 1 ] &&
-		{ sgdisk --new 2::+50M --typecode 2:ef00 \
-			--change-name 2:"EFI System" "$usb_dev" || cleanUp 10; }
+		{ sgdisk --new 1::+50M --typecode 1:ef00 \
+			--change-name 1:"EFI System" "$usb_dev" || cleanUp 10; }
 
 	# Set data partition size
 	[ -z "$data_size" ] ||
@@ -219,33 +199,16 @@ if [ "$update_only" -eq 0 ]; then
 	# Unmount device
 	unmountUSB "$usb_dev"
 
-	# Interactive configuration?
-	if [ "$interactive" -eq 1 ]; then
-		# Create hybrid MBR manually
-		# https://bit.ly/2z7HBrP
-		gdisk "$usb_dev"
-	elif [ "$hybrid" -eq 1 ]; then
-		# Create hybrid MBR
-		if [ "$eficonfig" -eq 1 ]; then
-			sgdisk --hybrid 1:2:3 "$usb_dev" || cleanUp 10
-		else
-			sgdisk --hybrid 1:2 "$usb_dev" || cleanUp 10
-		fi
-	fi
-
 	# Set bootable flag for data partion
 	sgdisk --attributes ${data_part}:set:2 "$usb_dev" || cleanUp 10
 
 	# Unmount device
 	unmountUSB "$usb_dev"
 
-	# Wipe BIOS boot partition
-	wipefs -af "${usb_dev}1" || true
-
 	# Format EFI System partition
 	if [ "$eficonfig" -eq 1 ]; then
-		wipefs -af "${usb_dev}2" || true
-		mkfs.vfat -v -F 32 "${usb_dev}2" || cleanUp 10
+		wipefs -af "${usb_dev}1" || true
+		mkfs.vfat -v -F 32 -n EFI "${usb_dev}1" || cleanUp 10
 	fi
 
 	# Wipe data partition
@@ -266,11 +229,10 @@ unmountUSB "$usb_dev"
 # Create temporary directories
 efi_mnt=$(mktemp -p "$tmp_dir" -d efi.XXXX) || cleanUp 10
 data_mnt=$(mktemp -p "$tmp_dir" -d data.XXXX) || cleanUp 10
-repo_dir=$(mktemp -p "$tmp_dir" -d repo.XXXX) || cleanUp 10
 
 # Mount EFI System partition
 [ "$eficonfig" -eq 1 ] &&
-	{ mount "${usb_dev}2" "$efi_mnt" || cleanUp 10; }
+	{ mount "${usb_dev}1" "$efi_mnt" || cleanUp 10; }
 
 # Mount data partition
 mount "${usb_dev}${data_part}" "$data_mnt" || cleanUp 10
@@ -281,35 +243,22 @@ mount "${usb_dev}${data_part}" "$data_mnt" || cleanUp 10
 		--boot-directory="${data_mnt}/${data_subdir}" --removable --recheck ||
 		cleanUp 10; }
 
-# Install GRUB for BIOS
-$grubpc --force --target=i386-pc \
-	--boot-directory="${data_mnt}/${data_subdir}" --recheck "$usb_dev" ||
-	cleanUp 10
-
-# Install fallback GRUB
-$grubpc --force --target=i386-pc \
-	--boot-directory="${data_mnt}/${data_subdir}" --recheck "${usb_dev}${data_part}" ||
-	true
-
 # Create necessary directories
 mkdir -p "${data_mnt}/${data_subdir}/isos" || cleanUp 10
 
 # Copy files
 (cd "$(dirname "$(realpath "$0")")" && cp -R ./mbusb.* "${data_mnt}/${data_subdir}"/grub*/) ||
 	cleanUp 10
+
+(cd "$(dirname "$(realpath "$0")")" && sed -i "1aset rootuuid=$(blkid -o value -s UUID ${usb_dev}${data_part})" ${data_mnt}/${data_subdir}/grub/mbusb.cfg) ||
+	cleanUp 10
+
 # Copy example configuration for GRUB
 (cd "$(dirname "$(realpath "$0")")" && cp ./grub.cfg.example "${data_mnt}/${data_subdir}"/grub*/) ||
 	cleanUp 10
 
 # Rename example configuration
 (cd "${data_mnt}/${data_subdir}"/grub*/ && cp grub.cfg.example grub.cfg) ||
-	cleanUp 10
-
-# Download memdisk
-syslinux_url='https://mirrors.edge.kernel.org/pub/linux/utils/boot/syslinux/syslinux-6.03.tar.gz'
-{ curl -sL "$syslinux_url" 2>/dev/null; } |
-	tar -xz -C "${data_mnt}/${data_subdir}"/grub*/ --no-same-owner --strip-components 3 \
-		'syslinux-6.03/bios/memdisk/memdisk' ||
 	cleanUp 10
 
 # Clean up and exit
