@@ -32,4 +32,5 @@ Visit the [project's website for more information][website].
 - curl or wget
 - gnutar
 - grub2
+- gnused
 - exfatprogs: for exfat
