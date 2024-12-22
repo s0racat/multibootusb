@@ -261,5 +261,9 @@ mkdir -p "${data_mnt}/${data_subdir}/isos" || cleanUp 10
 (cd "${data_mnt}/${data_subdir}"/grub*/ && cp grub.cfg.example grub.cfg) ||
 	cleanUp 10
 
+# Download wimboot
+wimboot_url='https://github.com/ipxe/wimboot/releases/latest/download/wimboot'
+curl -sL "$wimboot_url" -o "$data_mnt/$data_subdir/isos/wimboot" || cleanUp 10
+
 # Clean up and exit
 cleanUp

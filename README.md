@@ -29,8 +29,22 @@ Visit the [project's website for more information][website].
 
 - coreutils
 - gptfdisk
-- curl or wget
+- curl
 - gnutar
 - grub2
 - gnused
 - exfatprogs: for exfat
+
+## Example directory structure
+
+```bash
+eza --tree $data_mnt
+$data_mnt
+└── boot
+    ├── autoexec.ipxe
+    ├── grub
+    └── isos
+        ├── artix-xfce-runit-20240823-x86_64.iso
+        ├── hirens
+        └── ipxe.efi
+```
