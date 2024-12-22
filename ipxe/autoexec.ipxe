@@ -11,6 +11,7 @@ ifopen net0
 :start
 menu Please choose an option:
 item hirens Hirens Boot CD PE x64
+item shell Shell
 item exit Exit
 choose --default hirens --timeout 5000 selected
 goto ${selected}
@@ -32,3 +33,6 @@ boot
 
 #:exit
 #exit
+:shell
+shell
+
