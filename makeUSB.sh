@@ -265,5 +265,9 @@ mkdir -p "${data_mnt}/${data_subdir}/isos" || cleanUp 10
 wimboot_url='https://github.com/ipxe/wimboot/releases/latest/download/wimboot'
 curl -sL "$wimboot_url" -o "$data_mnt/$data_subdir/isos/wimboot" || cleanUp 10
 
+# Download ipxe.efi
+ipxe_url='https://boot.ipxe.org/ipxe.efi'
+curl -sL "$ipxe_url" -o "$data_mnt/$data_subdir/isos/ipxe.efi" || cleanUp 10
+
 # Clean up and exit
 cleanUp
