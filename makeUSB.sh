@@ -261,9 +261,15 @@ mkdir -p "${data_mnt}/${data_subdir}/isos" || cleanUp 10
 (cd "${data_mnt}/${data_subdir}"/grub*/ && cp grub.cfg.example grub.cfg) ||
 	cleanUp 10
 
+(cd "${data_mnt}/${data_subdir}"/grub*/ && mkdir tools ) || cleanUp 10
+
 # Download wimboot
-wimboot_url='https://github.com/ipxe/wimboot/releases/latest/download/wimboot'
-curl -sL "$wimboot_url" -o "$data_mnt/$data_subdir/isos/wimboot" || cleanUp 10
+wimboot_url='https://gitlab.com/api/v4/projects/55131919/packages/generic/wimboot/v2.8.0-1/wimboot-v2.8.0-1.tar.gz'
+(cd "${data_mnt}/${data_subdir}"/grub*/ && cd tools && curl -sL "$wimboot_url" | tar -zxvf - --wildcards --no-anchored 'wimboot.*') || cleanUp 10
+
+# Download mountiso
+mountiso_url='https://gitlab.com/api/v4/projects/55267894/packages/generic/mountiso/v0.1.0/mountiso-v0.1.0.zip'
+(cd "${data_mnt}/${data_subdir}"/grub*/ && cd tools && curl -sL "$mountiso_url" -o mountiso.zip && unzip mountiso.zip 'mountiso*' && rm mountiso.zip) || cleanUp 10
 
 # Download ipxe.efi
 ipxe_url='https://boot.ipxe.org/ipxe.efi'
