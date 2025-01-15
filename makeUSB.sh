@@ -164,11 +164,11 @@ if [ "$update_only" -eq 0 ]; then
 	sgdisk --zap-all "$usb_dev"
 
 	# Create GUID Partition Table
-	sgdisk --mbrtogpt "$usb_dev" || cleanUp 10
+	#sgdisk --mbrtogpt "$usb_dev" || cleanUp 10
 
 	# Create EFI System partition (50M)
 	[ "$eficonfig" -eq 1 ] &&
-		{ sgdisk --new 1::+50M --typecode 1:ef00 \
+		{ sgdisk --new 1::+50M --typecode 1:700 \
 			--change-name 1:"EFI System" "$usb_dev" || cleanUp 10; }
 
 	# Set data partition size
