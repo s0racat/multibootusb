@@ -31,6 +31,7 @@ Visit the [project's website for more information][website].
 - gptfdisk
 - curl
 - gnutar
+- unzip
 - grub2
 - gnused
 - exfatprogs: for exfat
