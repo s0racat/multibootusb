@@ -163,7 +163,7 @@ if [ "$update_only" -eq 0 ]; then
 	#sgdisk --mbrtogpt "$usb_dev" || cleanUp 10
 
 	# Create EFI System partition (50M)
-	sgdisk --new 1::+50M --typecode 1:700 \
+	sgdisk --new 1::+50M --typecode 1:0700 \
 			--change-name 1:"EFI System" "$usb_dev" || cleanUp 10; 
 
 	# Set data partition size
