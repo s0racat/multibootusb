@@ -241,7 +241,7 @@ mkdir -p "${data_mnt}/${data_subdir}/isos" || cleanUp 10
 cp -R ./mbusb.* "${data_mnt}/${data_subdir}"/grub*/ ||
 	cleanUp 10
 
-sed -i "1aset rootuuid=$(blkid -o value -s UUID ${usb_dev}${data_part})" ${data_mnt}/${data_subdir}/grub/mbusb.cfg) ||
+sed -i "1aset rootuuid=$(blkid -o value -s UUID ${usb_dev}${data_part})" ${data_mnt}/${data_subdir}/grub/mbusb.cfg ||
 	cleanUp 10
 
 # Copy example configuration for GRUB
