@@ -235,7 +235,7 @@ $grubefi --target=x86_64-efi --efi-directory="$efi_mnt" \
 	cleanUp 10
 
 # Create necessary directories
-mkdir -p "${data_mnt}/${data_subdir}/isos" || cleanUp 10
+mkdir -p "${data_mnt}/${data_subdir}/{isos,grub/tools}" || cleanUp 10
 
 # Copy files
 cp -R ./mbusb.* "${data_mnt}/${data_subdir}"/grub*/ ||
@@ -249,7 +249,7 @@ cp ./grub.cfg.example "${data_mnt}/${data_subdir}"/grub*/ ||
 	cleanUp 10
 
 # Rename example configuration
-(cd "${data_mnt}/${data_subdir}"/grub*/ && cp grub.cfg.example grub.cfg && mkdir tools) ||
+(cd "${data_mnt}/${data_subdir}"/grub*/ && cp grub.cfg.example grub.cfg) ||
 	cleanUp 10
 
 # Download wimboot
