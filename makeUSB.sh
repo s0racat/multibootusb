@@ -258,8 +258,7 @@ mountiso_url='https://gitlab.com/api/v4/projects/55267894/packages/generic/mount
 ipxe_url='https://boot.ipxe.org/ipxe.efi'
 (cd "${data_mnt}/${data_subdir}"/grub*/ && curl -sL "$ipxe_url" -o "isos/ipxe.efi" && cd tools &&
 	curl -sL "$wimboot_url" | tar -zxvf - --wildcards --no-anchored 'wimboot.*' &&
-	curl -sL "$mountiso_url" -o mountiso.zip && unzip mountiso.zip 'mountiso*' && rm mountiso.zip &&
-	|| cleanUp 10
+	curl -sL "$mountiso_url" -o mountiso.zip && unzip mountiso.zip 'mountiso*' && rm mountiso.zip) || cleanUp 10
 
 # Clean up and exit
 cleanUp
