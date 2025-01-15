@@ -235,7 +235,8 @@ $grubefi --target=x86_64-efi --efi-directory="$efi_mnt" \
 	cleanUp 10
 
 # Create necessary directories
-mkdir -p "${data_mnt}/${data_subdir}/{isos,grub/tools}" || cleanUp 10
+mkdir -p "${data_mnt}/${data_subdir}/isos" || cleanUp 10
+mkdir -p "${data_mnt}/${data_subdir}/grub/tools || cleanUp 10
 
 # Copy files
 cp -R ./mbusb.* "${data_mnt}/${data_subdir}"/grub*/ ||
