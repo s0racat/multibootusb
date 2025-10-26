@@ -41,6 +41,7 @@ Visit the [project's website for more information][website].
 ```bash
 eza --tree $data_mnt
 $data_mnt
+├── autounattend.xml
 └── boot
     ├── autoexec.ipxe
     ├── grub
